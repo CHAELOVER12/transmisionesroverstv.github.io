@@ -580,288 +580,148 @@
         </div>
     </div>
 
-    <script>
-        // ── WebRTC signaling ──
-const signalingSocket = new WebSocket('wss://tan-sneaky-numeric.glitch.me/'); // ← reemplaza TU_WS_URL
-let peer;
-signalingSocket.onmessage = ({ data }) => {
-  const msg = JSON.parse(data);
-  if (!peer) return;
-  if (msg.answer)    peer.signal(msg.answer);
-  else if (msg.candidate) peer.signal(msg.candidate);
-};
+   <script>
+  const signalingSocket = new WebSocket('wss://tan-sneaky-numeric.glitch.me/');
+  let peer;
+  let videoStream = null;
+  let isStreaming = false;
+  let isCameraActive = false;
+  let currentCamera = 'environment';
+  let streamStartTime = null;
+  let matchMinute = 0;
+  let homeScore = 0;
+  let awayScore = 0;
+  let streamInterval = null;
+  let timerInterval = null;
+  let isTimerRunning = false;
+  let dataCounter = 0;
+  let viewerCount = 0;
+  let overlayEnabled = false;
+  let currentQuality = '480p';
 
-        let videoStream = null;
-        let isStreaming = false;
-        let isCameraActive = false;
-        let currentCamera = 'environment';
-        let streamStartTime = null;
-        let matchMinute = 0;
-        let homeScore = 0;
-        let awayScore = 0;
-        let streamInterval = null;
-        let timerInterval = null;
-        let isTimerRunning = false;
-        let dataCounter = 0;
-        let viewerCount = 0;
-        let overlayEnabled = false;
+  const qualitySettings = {
+    '720p': { width: 1280, height: 720, bitrate: 2500 },
+    '480p': { width: 854, height: 480, bitrate: 1000 },
+    '360p': { width: 640, height: 360, bitrate: 600 }
+  };
 
-        // Configuraciones de calidad
-        const qualitySettings = {
-            '720p': { width: 1280, height: 720, bitrate: 2500 },
-            '480p': { width: 854, height: 480, bitrate: 1000 },
-            '360p': { width: 640, height: 360, bitrate: 600 }
-        };
+  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
-        let currentQuality = '480p';
+  signalingSocket.onmessage = ({ data }) => {
+    const msg = JSON.parse(data);
+    if (!peer) return;
+    if (msg.answer) peer.signal(msg.answer);
+    else if (msg.candidate) peer.signal(msg.candidate);
+  };
 
-        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-
-      async function startCamera() {
-  try {
-    const quality = qualitySettings[currentQuality];
-
-    const constraints = {
-      video: {
-        facingMode: isMobile ? currentCamera : 'user',
-        width: { ideal: quality.width },
-        height: { ideal: quality.height },
-        frameRate: { ideal: 30 }
-      },
-      audio: {
-        echoCancellation: true,
-        noiseSuppression: true,
-        autoGainControl: true
-      }
-    };
-
-    // 🔹 Primero: capturar el stream de la cámara
-    videoStream = await navigator.mediaDevices.getUserMedia(constraints);
-    document.getElementById('videoStream').srcObject = videoStream;
-
-    // 🔹 Después: crear el peer con ese stream ya disponible
-    peer = new SimplePeer({ initiator: true, trickle: true, stream: videoStream });
-
-    peer.on('signal', data => signalingSocket.send(JSON.stringify({ offer: data })));
-    peer.on('error', err => console.error('Peer error:', err));
-
-    document.getElementById('connectionStatus').textContent = '📡 Conectando cámara...';
-    document.getElementById('connectionStatus').className = 'connection-status status-connecting';
-
-    isCameraActive = true;
-    document.getElementById('startCameraBtn').disabled = true;
-    document.getElementById('startStreamBtn').disabled = false;
-    document.getElementById('connectionStatus').textContent = `📹 Cámara activa (${currentQuality}) - Lista para streaming`;
-    document.getElementById('connectionStatus').className = 'connection-status status-connected';
-
-    document.querySelectorAll('.quality-btn').forEach(btn => btn.style.opacity = '0.5');
-    
-  } catch (error) {
-    console.error('Error al acceder a la cámara:', error);
-    document.getElementById('connectionStatus').textContent = '❌ Error: No se puede acceder a la cámara';
-    document.getElementById('connectionStatus').className = 'connection-status status-disconnected';
+  function debugLog(msg) {
+    const box = document.getElementById('connectionStatus');
+    box.innerHTML = `<pre style="font-size:12px; color:#0f0; white-space:pre-wrap;">${msg}</pre>`;
+    console.log(msg);
   }
-}
 
-        async function switchCamera() {
-            if (!isCameraActive || !isMobile) return;
-            
-            try {
-                currentCamera = currentCamera === 'user' ? 'environment' : 'user';
-                
-                if (videoStream) {
-                    videoStream.getTracks().forEach(track => track.stop());
-                }
-                
-                const quality = qualitySettings[currentQuality];
-                const constraints = {
-                    video: {
-                        facingMode: currentCamera,
-                        width: { ideal: quality.width },
-                        height: { ideal: quality.height }
-                    },
-                    audio: true
-                };
-
-                videoStream = await navigator.mediaDevices.getUserMedia(constraints);
-                document.getElementById('videoStream').srcObject = videoStream;
-                
-            } catch (error) {
-                console.error('Error al cambiar cámara:', error);
-            }
+  async function startCamera() {
+    try {
+      const quality = qualitySettings[currentQuality];
+      const constraints = {
+        video: {
+          facingMode: isMobile ? currentCamera : 'user',
+          width: { ideal: quality.width },
+          height: { ideal: quality.height },
+          frameRate: { ideal: 30 }
+        },
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
         }
+      };
 
-        function setQuality(quality) {
-            if (isCameraActive) return; // No permitir cambio durante transmisión
-            
-            currentQuality = quality;
-            document.querySelectorAll('.quality-btn').forEach(btn => btn.classList.remove('active'));
-            document.querySelector(`[data-quality="${quality}"]`).classList.add('active');
-            
-            const qualityTexts = {
-                '720p': '720p HD - Mejor calidad',
-                '480p': '480p SD - Calidad estándar', 
-                '360p': '360p - Ahorro de datos'
-            };
-            
-            document.getElementById('currentQuality').textContent = `Calidad actual: ${qualityTexts[quality]}`;
-        }
+      videoStream = await navigator.mediaDevices.getUserMedia(constraints);
+      document.getElementById('videoStream').srcObject = videoStream;
 
-        function startStream() {
-            if (!isCameraActive) return;
-            
-            isStreaming = true;
-            streamStartTime = new Date();
-            
-            document.getElementById('startStreamBtn').disabled = true;
-            document.getElementById('stopStreamBtn').disabled = false;
-            document.getElementById('liveIndicator').style.display = 'inline-block';
-            document.getElementById('connectionStatus').textContent = '🔴 TRANSMITIENDO EN VIVO';
-            document.getElementById('connectionStatus').className = 'connection-status status-streaming';
-            
-            streamInterval = setInterval(updateStreamStats, 1000);
-            
-            // Simular espectadores
-            viewerCount = Math.floor(Math.random() * 10) + 1;
-            setInterval(() => {
-                if (isStreaming) {
-                    const change = Math.floor(Math.random() * 5) - 2;
-                    viewerCount = Math.max(0, viewerCount + change);
-                    document.getElementById('viewerCount').textContent = viewerCount;
-                }
-            }, 8000);
-        }
+      peer = new SimplePeer({ initiator: true, trickle: true, stream: videoStream });
 
-        function stopStream() {
-            isStreaming = false;
-            
-            if (streamInterval) clearInterval(streamInterval);
-            
-            document.getElementById('startStreamBtn').disabled = false;
-            document.getElementById('stopStreamBtn').disabled = true;
-            document.getElementById('liveIndicator').style.display = 'none';
-            document.getElementById('connectionStatus').textContent = '📹 Cámara activa - Stream detenido';
-            document.getElementById('connectionStatus').className = 'connection-status status-connected';
-            
-            // Reactivar controles de calidad
-            document.querySelectorAll('.quality-btn').forEach(btn => btn.style.opacity = '1');
-            
-            // Detener cámara
-            if (videoStream) {
-                videoStream.getTracks().forEach(track => track.stop());
-                videoStream = null;
-            }
-            
-            isCameraActive = false;
-            document.getElementById('startCameraBtn').disabled = false;
-            document.getElementById('startStreamBtn').disabled = true;
-            document.getElementById('connectionStatus').textContent = '📡 Desconectado';
-            document.getElementById('connectionStatus').className = 'connection-status status-disconnected';
-        }
+      peer.on('signal', data => {
+        signalingSocket.send(JSON.stringify({ offer: data }));
+        debugLog('📡 Oferta enviada:\n' + JSON.stringify(data, null, 2));
+      });
 
-        function toggleOverlay() {
-            overlayEnabled = !overlayEnabled;
-            const toggle = document.getElementById('overlayToggle');
-            const overlay = document.getElementById('videoOverlay');
-            
-            if (overlayEnabled) {
-                toggle.classList.add('active');
-                overlay.style.display = 'block';
-            } else {
-                toggle.classList.remove('active');
-                overlay.style.display = 'none';
-            }
-        }
+      peer.on('error', err => debugLog('❌ Peer error: ' + err.message));
 
-        function updateTeamNames() {
-            const homeTeam = document.getElementById('homeTeamInput').value || 'LOCAL';
-            const awayTeam = document.getElementById('awayTeamInput').value || 'VISITANTE';
-            
-            document.getElementById('overlayHomeTeam').textContent = homeTeam.toUpperCase();
-            document.getElementById('overlayAwayTeam').textContent = awayTeam.toUpperCase();
-        }
+      isCameraActive = true;
+      document.getElementById('startCameraBtn').disabled = true;
+      document.getElementById('startStreamBtn').disabled = false;
+      document.getElementById('connectionStatus').textContent =
+        `📹 Cámara activa (${currentQuality}) - Lista para streaming`;
+      document.getElementById('connectionStatus').className =
+        'connection-status status-connected';
+      document.querySelectorAll('.quality-btn').forEach(btn => btn.style.opacity = '0.5');
+    } catch (err) {
+      debugLog('❌ Error al acceder a la cámara:\n' + err.message);
+    }
+  }
 
-        function addGoal(team) {
-            if (team === 'home') {
-                homeScore++;
-                document.getElementById('overlayHomeScore').textContent = homeScore;
-            } else {
-                awayScore++;
-                document.getElementById('overlayAwayScore').textContent = awayScore;
-            }
-        }
+  function startStream() {
+    if (!isCameraActive) return;
+    isStreaming = true;
+    streamStartTime = new Date();
+    document.getElementById('startStreamBtn').disabled = true;
+    document.getElementById('stopStreamBtn').disabled = false;
+    document.getElementById('liveIndicator').style.display = 'inline-block';
+    document.getElementById('connectionStatus').textContent = '🔴 TRANSMITIENDO EN VIVO';
+    document.getElementById('connectionStatus').className = 'connection-status status-streaming';
+    streamInterval = setInterval(updateStreamStats, 1000);
+    viewerCount = Math.floor(Math.random() * 10) + 1;
 
-        function startTimer() {
-            if (!isTimerRunning) {
-                isTimerRunning = true;
-                timerInterval = setInterval(() => {
-                    matchMinute++;
-                    document.getElementById('timerDisplay').textContent = matchMinute + "'";
-                    document.getElementById('overlayTimer').textContent = matchMinute + "'";
-                }, 60000); // Cada minuto real = 1 minuto de juego
-            }
-        }
+    setInterval(() => {
+      if (isStreaming) {
+        const change = Math.floor(Math.random() * 5) - 2;
+        viewerCount = Math.max(0, viewerCount + change);
+        document.getElementById('viewerCount').textContent = viewerCount;
+      }
+    }, 8000);
+  }
 
-        function pauseTimer() {
-            isTimerRunning = false;
-            if (timerInterval) clearInterval(timerInterval);
-        }
+  function stopStream() {
+    isStreaming = false;
+    if (streamInterval) clearInterval(streamInterval);
+    document.getElementById('startStreamBtn').disabled = false;
+    document.getElementById('stopStreamBtn').disabled = true;
+    document.getElementById('liveIndicator').style.display = 'none';
+    document.getElementById('connectionStatus').textContent = '📡 Desconectado';
+    document.getElementById('connectionStatus').className = 'connection-status status-disconnected';
+    document.querySelectorAll('.quality-btn').forEach(btn => btn.style.opacity = '1');
 
-        function resetTimer() {
-            pauseTimer();
-            matchMinute = 0;
-            homeScore = 0;
-            awayScore = 0;
-            document.getElementById('timerDisplay').textContent = "0'";
-            document.getElementById('overlayTimer').textContent = "0'";
-            document.getElementById('overlayHomeScore').textContent = "0";
-            document.getElementById('overlayAwayScore').textContent = "0";
-        }
+    if (videoStream) {
+      videoStream.getTracks().forEach(track => track.stop());
+      videoStream = null;
+    }
 
-        function updateStreamStats() {
-            if (!streamStartTime) return;
-            
-            const now = new Date();
-            const duration = Math.floor((now - streamStartTime) / 1000);
-            const hours = Math.floor(duration / 3600);
-            const minutes = Math.floor((duration % 3600) / 60);
-            const seconds = duration % 60;
-            
-            document.getElementById('streamDuration').textContent = 
-                `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-            
-            // Simular uso de datos basado en calidad
-            const dataRate = qualitySettings[currentQuality].bitrate / 8000; // MB por segundo aprox
-            dataCounter += dataRate;
-            document.getElementById('dataUsed').textContent = `${dataCounter.toFixed(1)} MB`;
-            
-            // Simular FPS
-            const fps = 25 + Math.floor(Math.random() * 10);
-            document.getElementById('fps').textContent = `${fps} FPS`;
-        }
+    if (peer) {
+      peer.destroy();
+      peer = null;
+    }
 
-        // Prevenir que la pantalla se apague
-        if ('wakeLock' in navigator) {
-            let wakeLock = null;
-            
-            async function requestWakeLock() {
-                if (isStreaming) {
-                    try {
-                        wakeLock = await navigator.wakeLock.request('screen');
-                    } catch (err) {
-                        console.log('Wake lock failed:', err);
-                    }
-                }
-            }
-            
-            document.addEventListener('visibilitychange', requestWakeLock);
-        }
+    isCameraActive = false;
+  }
 
-        // Inicializar
-        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-            document.getElementById('connectionStatus').textContent = '❌ Tu dispositivo no soporta cámara web';
-            document.getElementById('connectionStatus').className = 'connection-status status-disconnected';
-        }
-    </script>
+  function updateStreamStats() {
+    if (!streamStartTime) return;
+    const now = new Date();
+    const duration = Math.floor((now - streamStartTime) / 1000);
+    const hours = Math.floor(duration / 3600);
+    const minutes = Math.floor((duration % 3600) / 60);
+    const seconds = duration % 60;
+    document.getElementById('streamDuration').textContent =
+      `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    const dataRate = qualitySettings[currentQuality].bitrate / 8000;
+    dataCounter += dataRate;
+    document.getElementById('dataUsed').textContent = `${dataCounter.toFixed(1)} MB`;
+    const fps = 25 + Math.floor(Math.random() * 10);
+    document.getElementById('fps').textContent = `${fps} FPS`;
+  }
+</script>
 </body>
 </html>
+
