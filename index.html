@@ -617,16 +617,33 @@ signalingSocket.onmessage = ({ data }) => {
 
         const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
-        async function startCamera() {
-            try {
-                document.getElementById('videoStream').srcObject = videoStream;
-                // ── Inicializa SimplePeer como “initiator” ──
-                peer = new SimplePeer({ initiator: true, trickle: true, stream: videoStream });
-                peer.on('signal', data => signalingSocket.send(JSON.stringify({ offer: data })));
-                peer.on('error', err => console.error('Peer error:', err));
+      async function startCamera() {
+  try {
+    const videoStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+    document.getElementById('videoStream').srcObject = videoStream;
 
-                document.getElementById('connectionStatus').textContent = '📡 Conectando cámara...';
-                document.getElementById('connectionStatus').className = 'connection-status status-connecting';
+    // ── Inicializa SimplePeer como “initiator” ──
+    peer = new SimplePeer({ initiator: true, trickle: true, stream: videoStream });
+
+    peer.on('signal', data => {
+      signalingSocket.send(JSON.stringify({ offer: data }));
+    });
+
+    peer.on('error', err => {
+      console.error('Peer error:', err);
+      document.getElementById('connectionStatus').textContent = '❌ Error de conexión';
+      document.getElementById('connectionStatus').className = 'connection-status status-error';
+    });
+
+    document.getElementById('connectionStatus').textContent = '📡 Conectando cámara...';
+    document.getElementById('connectionStatus').className = 'connection-status status-connecting';
+
+  } catch (err) {
+    console.error('No se pudo acceder a la cámara:', err);
+    document.getElementById('connectionStatus').textContent = '🚫 Error al acceder a la cámara';
+    document.getElementById('connectionStatus').className = 'connection-status status-error';
+  }
+}
 
                 const quality = qualitySettings[currentQuality];
                 
