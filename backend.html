@@ -1,0 +1,849 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#1e3c72">
+    <title>📱 Streaming Backend - Control de Transmisión</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            touch-action: manipulation;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 100%;
+            padding: 10px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px 10px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+
+        .live-indicator {
+            display: inline-block;
+            background: #ff4444;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            animation: pulse 2s infinite;
+            margin-bottom: 10px;
+            font-size: 0.9em;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+
+        .camera-section {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 15px;
+            margin-bottom: 15px;
+            backdrop-filter: blur(10px);
+        }
+
+        .video-container {
+            position: relative;
+            width: 100%;
+            height: 280px;
+            background: #000;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 15px;
+        }
+
+        #videoStream {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .video-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        .stream-graphics {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .logo-container {
+            background: rgba(0, 0, 0, 0.85);
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 0.75em;
+            color: #ffd700;
+            border: 1px solid #ffd700;
+            letter-spacing: 0.5px;
+        }
+
+        .scoreboard-container {
+            display: flex;
+            align-items: center;
+            gap: 0;
+        }
+
+        .scoreboard {
+            background: linear-gradient(135deg, rgba(0, 0, 0, 0.95), rgba(20, 20, 20, 0.95));
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            overflow: hidden;
+            font-weight: bold;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+        }
+
+        .team-section {
+            display: flex;
+            align-items: center;
+            padding: 8px 12px;
+            gap: 8px;
+            min-width: 80px;
+        }
+
+        .home-team {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .away-team {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .team-name {
+            font-size: 0.7em;
+            color: #ffffff;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+        }
+
+        .score-number {
+            font-size: 1.1em;
+            color: #ffffff;
+            font-weight: bold;
+            min-width: 18px;
+            text-align: center;
+        }
+
+        .match-timer {
+            background: rgba(0, 0, 0, 0.9);
+            padding: 6px 10px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 0.7em;
+            color: #ffffff;
+            text-align: center;
+            min-width: 40px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            margin-left: 8px;
+        }
+
+        .quality-controls {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 15px;
+            margin-bottom: 15px;
+            backdrop-filter: blur(10px);
+        }
+
+        .quality-selector {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .quality-btn {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid transparent;
+            padding: 12px 8px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.8em;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .quality-btn.active {
+            background: linear-gradient(45deg, #22c55e, #16a34a);
+            border-color: #22c55e;
+        }
+
+        .quality-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .camera-controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .control-btn {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a52);
+            color: white;
+            border: none;
+            padding: 15px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.9em;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .control-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 107, 107, 0.4);
+        }
+
+        .control-btn:active {
+            transform: translateY(0);
+        }
+
+        .control-btn:disabled {
+            background: #666;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .control-btn.active {
+            background: linear-gradient(45deg, #22c55e, #16a34a);
+        }
+
+        .overlay-controls {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 15px;
+            margin-bottom: 15px;
+            backdrop-filter: blur(10px);
+        }
+
+        .overlay-toggle {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 50px;
+            height: 24px;
+            background: #666;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .toggle-switch.active {
+            background: #22c55e;
+        }
+
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            transition: transform 0.3s;
+        }
+
+        .toggle-switch.active::after {
+            transform: translateX(26px);
+        }
+
+        .match-controls {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 15px;
+            margin-bottom: 15px;
+            backdrop-filter: blur(10px);
+        }
+
+        .team-inputs {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .team-input {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center;
+            font-size: 0.9em;
+        }
+
+        .team-input::placeholder {
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .score-controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .timer-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .timer-btn {
+            background: linear-gradient(45deg, #8b5cf6, #7c3aed);
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.8em;
+        }
+
+        .timer-display {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-weight: bold;
+            min-width: 60px;
+            text-align: center;
+        }
+
+        .stream-stats {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 15px;
+            backdrop-filter: blur(10px);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #ffd700;
+            display: block;
+        }
+
+        .stat-label {
+            font-size: 0.8em;
+            color: #ccc;
+        }
+
+        .connection-status {
+            text-align: center;
+            padding: 12px;
+            margin: 10px 0;
+            border-radius: 10px;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+
+        .status-connected {
+            background: rgba(34, 197, 94, 0.2);
+            border: 1px solid #22c55e;
+            color: #22c55e;
+        }
+
+        .status-disconnected {
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid #ef4444;
+            color: #ef4444;
+        }
+
+        .status-streaming {
+            background: rgba(255, 68, 68, 0.3);
+            border: 1px solid #ff4444;
+            color: #ff4444;
+            animation: pulse 2s infinite;
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 5px;
+            }
+            
+            .video-container {
+                height: 220px;
+            }
+            
+            .quality-selector {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .scoreboard {
+                transform: scale(0.9);
+                transform-origin: left top;
+            }
+            
+            .team-name {
+                font-size: 0.65em;
+            }
+            
+            .score-number {
+                font-size: 1em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="live-indicator" id="liveIndicator" style="display: none;">🔴 EN VIVO</div>
+            <h1>📱 Control de Streaming</h1>
+            <p>Backend de Transmisión Móvil</p>
+        </div>
+
+        <div class="camera-section">
+            <h3 style="margin-bottom: 15px;">📹 Vista Previa con Overlay</h3>
+            <div class="video-container">
+                <video id="videoStream" autoplay muted playsinline></video>
+                <div class="video-overlay" id="videoOverlay" style="display: none;">
+                    <div class="stream-graphics">
+                        <div class="logo-container">
+                            🏆 DEPORTES TV
+                        </div>
+                        <div class="scoreboard-container">
+                            <div class="scoreboard">
+                                <div class="team-section home-team">
+                                    <div class="team-name" id="overlayHomeTeam">LOCAL</div>
+                                    <div class="score-number" id="overlayHomeScore">0</div>
+                                </div>
+                                <div class="team-section away-team">
+                                    <div class="team-name" id="overlayAwayTeam">VISITANTE</div>
+                                    <div class="score-number" id="overlayAwayScore">0</div>
+                                </div>
+                            </div>
+                            <div class="match-timer" id="overlayTimer">
+                                0'
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="camera-controls">
+                <button class="control-btn" onclick="startCamera()" id="startCameraBtn">
+                    📹 Iniciar Cámara
+                </button>
+                <button class="control-btn" onclick="startStream()" id="startStreamBtn" disabled>
+                    📡 Iniciar Stream
+                </button>
+                <button class="control-btn" onclick="stopStream()" id="stopStreamBtn" disabled>
+                    ⏹️ Detener Stream
+                </button>
+                <button class="control-btn" onclick="switchCamera()" id="switchBtn">
+                    🔄 Cambiar Cámara
+                </button>
+            </div>
+        </div>
+
+        <div class="quality-controls">
+            <h3 style="margin-bottom: 15px;">⚙️ Calidad de Video</h3>
+            <div class="quality-selector">
+                <button class="quality-btn" onclick="setQuality('720p')" data-quality="720p">
+                    📱 720p<br><small>HD</small>
+                </button>
+                <button class="quality-btn active" onclick="setQuality('480p')" data-quality="480p">
+                    📺 480p<br><small>SD</small>
+                </button>
+                <button class="quality-btn" onclick="setQuality('360p')" data-quality="360p">
+                    📶 360p<br><small>Móvil</small>
+                </button>
+            </div>
+            <div style="text-align: center; font-size: 0.8em; color: #ccc;">
+                <span id="currentQuality">Calidad actual: 480p SD</span>
+            </div>
+        </div>
+
+        <div class="overlay-controls">
+            <h3 style="margin-bottom: 15px;">🎨 Control de Overlay</h3>
+            <div class="overlay-toggle">
+                <div class="toggle-switch" id="overlayToggle" onclick="toggleOverlay()"></div>
+                <span>Mostrar gráficos en pantalla</span>
+            </div>
+            <div style="font-size: 0.8em; color: #ccc;">
+                Los gráficos incluyen: logo, marcador y cronómetro
+            </div>
+        </div>
+
+        <div class="connection-status status-disconnected" id="connectionStatus">
+            📡 Desconectado - Configura la calidad y presiona "Iniciar Cámara"
+        </div>
+
+        <div class="match-controls">
+            <h3 style="margin-bottom: 15px;">⚽ Control del Partido</h3>
+            
+            <div class="team-inputs">
+                <input type="text" class="team-input" placeholder="Equipo Local" id="homeTeamInput" onchange="updateTeamNames()">
+                <div style="text-align: center; font-size: 1.2em;">VS</div>
+                <input type="text" class="team-input" placeholder="Equipo Visitante" id="awayTeamInput" onchange="updateTeamNames()">
+            </div>
+
+            <div class="score-controls">
+                <button class="control-btn" onclick="addGoal('home')" style="background: linear-gradient(45deg, #22c55e, #16a34a);">
+                    ⚽ +1 Local
+                </button>
+                <button class="control-btn" onclick="addGoal('away')" style="background: linear-gradient(45deg, #22c55e, #16a34a);">
+                    ⚽ +1 Visitante
+                </button>
+            </div>
+
+            <div class="timer-controls">
+                <button class="timer-btn" onclick="startTimer()">▶️ Iniciar</button>
+                <button class="timer-btn" onclick="pauseTimer()">⏸️ Pausar</button>
+                <button class="timer-btn" onclick="resetTimer()">🔄 Reset</button>
+                <div class="timer-display" id="timerDisplay">0'</div>
+            </div>
+        </div>
+
+        <div class="stream-stats">
+            <h3 style="margin-bottom: 15px;">📊 Estadísticas del Stream</h3>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <span class="stat-value" id="streamDuration">00:00</span>
+                    <span class="stat-label">Duración</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-value" id="viewerCount">0</span>
+                    <span class="stat-label">Espectadores</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-value" id="dataUsed">0 MB</span>
+                    <span class="stat-label">Datos</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-value" id="fps">0 FPS</span>
+                    <span class="stat-label">Frames</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let videoStream = null;
+        let isStreaming = false;
+        let isCameraActive = false;
+        let currentCamera = 'environment';
+        let streamStartTime = null;
+        let matchMinute = 0;
+        let homeScore = 0;
+        let awayScore = 0;
+        let streamInterval = null;
+        let timerInterval = null;
+        let isTimerRunning = false;
+        let dataCounter = 0;
+        let viewerCount = 0;
+        let overlayEnabled = false;
+
+        // Configuraciones de calidad
+        const qualitySettings = {
+            '720p': { width: 1280, height: 720, bitrate: 2500 },
+            '480p': { width: 854, height: 480, bitrate: 1000 },
+            '360p': { width: 640, height: 360, bitrate: 600 }
+        };
+
+        let currentQuality = '480p';
+
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+        async function startCamera() {
+            try {
+                document.getElementById('connectionStatus').textContent = '📡 Conectando cámara...';
+                document.getElementById('connectionStatus').className = 'connection-status status-connecting';
+
+                const quality = qualitySettings[currentQuality];
+                
+                const constraints = {
+                    video: {
+                        facingMode: isMobile ? currentCamera : 'user',
+                        width: { ideal: quality.width },
+                        height: { ideal: quality.height },
+                        frameRate: { ideal: 30 }
+                    },
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true
+                    }
+                };
+
+                videoStream = await navigator.mediaDevices.getUserMedia(constraints);
+                document.getElementById('videoStream').srcObject = videoStream;
+                
+                isCameraActive = true;
+                document.getElementById('startCameraBtn').disabled = true;
+                document.getElementById('startStreamBtn').disabled = false;
+                document.getElementById('connectionStatus').textContent = `📹 Cámara activa (${currentQuality}) - Lista para streaming`;
+                document.getElementById('connectionStatus').className = 'connection-status status-connected';
+                
+                // Deshabilitar cambio de calidad mientras la cámara está activa
+                document.querySelectorAll('.quality-btn').forEach(btn => btn.style.opacity = '0.5');
+                
+            } catch (error) {
+                console.error('Error al acceder a la cámara:', error);
+                document.getElementById('connectionStatus').textContent = '❌ Error: No se puede acceder a la cámara';
+                document.getElementById('connectionStatus').className = 'connection-status status-disconnected';
+            }
+        }
+
+        async function switchCamera() {
+            if (!isCameraActive || !isMobile) return;
+            
+            try {
+                currentCamera = currentCamera === 'user' ? 'environment' : 'user';
+                
+                if (videoStream) {
+                    videoStream.getTracks().forEach(track => track.stop());
+                }
+                
+                const quality = qualitySettings[currentQuality];
+                const constraints = {
+                    video: {
+                        facingMode: currentCamera,
+                        width: { ideal: quality.width },
+                        height: { ideal: quality.height }
+                    },
+                    audio: true
+                };
+
+                videoStream = await navigator.mediaDevices.getUserMedia(constraints);
+                document.getElementById('videoStream').srcObject = videoStream;
+                
+            } catch (error) {
+                console.error('Error al cambiar cámara:', error);
+            }
+        }
+
+        function setQuality(quality) {
+            if (isCameraActive) return; // No permitir cambio durante transmisión
+            
+            currentQuality = quality;
+            document.querySelectorAll('.quality-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelector(`[data-quality="${quality}"]`).classList.add('active');
+            
+            const qualityTexts = {
+                '720p': '720p HD - Mejor calidad',
+                '480p': '480p SD - Calidad estándar', 
+                '360p': '360p - Ahorro de datos'
+            };
+            
+            document.getElementById('currentQuality').textContent = `Calidad actual: ${qualityTexts[quality]}`;
+        }
+
+        function startStream() {
+            if (!isCameraActive) return;
+            
+            isStreaming = true;
+            streamStartTime = new Date();
+            
+            document.getElementById('startStreamBtn').disabled = true;
+            document.getElementById('stopStreamBtn').disabled = false;
+            document.getElementById('liveIndicator').style.display = 'inline-block';
+            document.getElementById('connectionStatus').textContent = '🔴 TRANSMITIENDO EN VIVO';
+            document.getElementById('connectionStatus').className = 'connection-status status-streaming';
+            
+            streamInterval = setInterval(updateStreamStats, 1000);
+            
+            // Simular espectadores
+            viewerCount = Math.floor(Math.random() * 10) + 1;
+            setInterval(() => {
+                if (isStreaming) {
+                    const change = Math.floor(Math.random() * 5) - 2;
+                    viewerCount = Math.max(0, viewerCount + change);
+                    document.getElementById('viewerCount').textContent = viewerCount;
+                }
+            }, 8000);
+        }
+
+        function stopStream() {
+            isStreaming = false;
+            
+            if (streamInterval) clearInterval(streamInterval);
+            
+            document.getElementById('startStreamBtn').disabled = false;
+            document.getElementById('stopStreamBtn').disabled = true;
+            document.getElementById('liveIndicator').style.display = 'none';
+            document.getElementById('connectionStatus').textContent = '📹 Cámara activa - Stream detenido';
+            document.getElementById('connectionStatus').className = 'connection-status status-connected';
+            
+            // Reactivar controles de calidad
+            document.querySelectorAll('.quality-btn').forEach(btn => btn.style.opacity = '1');
+            
+            // Detener cámara
+            if (videoStream) {
+                videoStream.getTracks().forEach(track => track.stop());
+                videoStream = null;
+            }
+            
+            isCameraActive = false;
+            document.getElementById('startCameraBtn').disabled = false;
+            document.getElementById('startStreamBtn').disabled = true;
+            document.getElementById('connectionStatus').textContent = '📡 Desconectado';
+            document.getElementById('connectionStatus').className = 'connection-status status-disconnected';
+        }
+
+        function toggleOverlay() {
+            overlayEnabled = !overlayEnabled;
+            const toggle = document.getElementById('overlayToggle');
+            const overlay = document.getElementById('videoOverlay');
+            
+            if (overlayEnabled) {
+                toggle.classList.add('active');
+                overlay.style.display = 'block';
+            } else {
+                toggle.classList.remove('active');
+                overlay.style.display = 'none';
+            }
+        }
+
+        function updateTeamNames() {
+            const homeTeam = document.getElementById('homeTeamInput').value || 'LOCAL';
+            const awayTeam = document.getElementById('awayTeamInput').value || 'VISITANTE';
+            
+            document.getElementById('overlayHomeTeam').textContent = homeTeam.toUpperCase();
+            document.getElementById('overlayAwayTeam').textContent = awayTeam.toUpperCase();
+        }
+
+        function addGoal(team) {
+            if (team === 'home') {
+                homeScore++;
+                document.getElementById('overlayHomeScore').textContent = homeScore;
+            } else {
+                awayScore++;
+                document.getElementById('overlayAwayScore').textContent = awayScore;
+            }
+        }
+
+        function startTimer() {
+            if (!isTimerRunning) {
+                isTimerRunning = true;
+                timerInterval = setInterval(() => {
+                    matchMinute++;
+                    document.getElementById('timerDisplay').textContent = matchMinute + "'";
+                    document.getElementById('overlayTimer').textContent = matchMinute + "'";
+                }, 60000); // Cada minuto real = 1 minuto de juego
+            }
+        }
+
+        function pauseTimer() {
+            isTimerRunning = false;
+            if (timerInterval) clearInterval(timerInterval);
+        }
+
+        function resetTimer() {
+            pauseTimer();
+            matchMinute = 0;
+            homeScore = 0;
+            awayScore = 0;
+            document.getElementById('timerDisplay').textContent = "0'";
+            document.getElementById('overlayTimer').textContent = "0'";
+            document.getElementById('overlayHomeScore').textContent = "0";
+            document.getElementById('overlayAwayScore').textContent = "0";
+        }
+
+        function updateStreamStats() {
+            if (!streamStartTime) return;
+            
+            const now = new Date();
+            const duration = Math.floor((now - streamStartTime) / 1000);
+            const hours = Math.floor(duration / 3600);
+            const minutes = Math.floor((duration % 3600) / 60);
+            const seconds = duration % 60;
+            
+            document.getElementById('streamDuration').textContent = 
+                `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            
+            // Simular uso de datos basado en calidad
+            const dataRate = qualitySettings[currentQuality].bitrate / 8000; // MB por segundo aprox
+            dataCounter += dataRate;
+            document.getElementById('dataUsed').textContent = `${dataCounter.toFixed(1)} MB`;
+            
+            // Simular FPS
+            const fps = 25 + Math.floor(Math.random() * 10);
+            document.getElementById('fps').textContent = `${fps} FPS`;
+        }
+
+        // Prevenir que la pantalla se apague
+        if ('wakeLock' in navigator) {
+            let wakeLock = null;
+            
+            async function requestWakeLock() {
+                if (isStreaming) {
+                    try {
+                        wakeLock = await navigator.wakeLock.request('screen');
+                    } catch (err) {
+                        console.log('Wake lock failed:', err);
+                    }
+                }
+            }
+            
+            document.addEventListener('visibilitychange', requestWakeLock);
+        }
+
+        // Inicializar
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            document.getElementById('connectionStatus').textContent = '❌ Tu dispositivo no soporta cámara web';
+            document.getElementById('connectionStatus').className = 'connection-status status-disconnected';
+        }
+    </script>
+</body>
+</html>
