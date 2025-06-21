@@ -582,7 +582,7 @@
 
     <script>
         // ── WebRTC signaling ──
-const signalingSocket = new WebSocket('wss:https://tan-sneaky-numeric.glitch.me/'); // ← reemplaza TU_WS_URL
+const signalingSocket = new WebSocket('wss://tan-sneaky-numeric.glitch.me/'); // ← reemplaza TU_WS_URL
 let peer;
 signalingSocket.onmessage = ({ data }) => {
   const msg = JSON.parse(data);
@@ -619,66 +619,49 @@ signalingSocket.onmessage = ({ data }) => {
 
       async function startCamera() {
   try {
-    const videoStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+    const quality = qualitySettings[currentQuality];
+
+    const constraints = {
+      video: {
+        facingMode: isMobile ? currentCamera : 'user',
+        width: { ideal: quality.width },
+        height: { ideal: quality.height },
+        frameRate: { ideal: 30 }
+      },
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true
+      }
+    };
+
+    // 🔹 Primero: capturar el stream de la cámara
+    videoStream = await navigator.mediaDevices.getUserMedia(constraints);
     document.getElementById('videoStream').srcObject = videoStream;
 
-    // ── Inicializa SimplePeer como “initiator” ──
+    // 🔹 Después: crear el peer con ese stream ya disponible
     peer = new SimplePeer({ initiator: true, trickle: true, stream: videoStream });
 
-    peer.on('signal', data => {
-      signalingSocket.send(JSON.stringify({ offer: data }));
-    });
-
-    peer.on('error', err => {
-      console.error('Peer error:', err);
-      document.getElementById('connectionStatus').textContent = '❌ Error de conexión';
-      document.getElementById('connectionStatus').className = 'connection-status status-error';
-    });
+    peer.on('signal', data => signalingSocket.send(JSON.stringify({ offer: data })));
+    peer.on('error', err => console.error('Peer error:', err));
 
     document.getElementById('connectionStatus').textContent = '📡 Conectando cámara...';
     document.getElementById('connectionStatus').className = 'connection-status status-connecting';
 
-  } catch (err) {
-    console.error('No se pudo acceder a la cámara:', err);
-    document.getElementById('connectionStatus').textContent = '🚫 Error al acceder a la cámara';
-    document.getElementById('connectionStatus').className = 'connection-status status-error';
+    isCameraActive = true;
+    document.getElementById('startCameraBtn').disabled = true;
+    document.getElementById('startStreamBtn').disabled = false;
+    document.getElementById('connectionStatus').textContent = `📹 Cámara activa (${currentQuality}) - Lista para streaming`;
+    document.getElementById('connectionStatus').className = 'connection-status status-connected';
+
+    document.querySelectorAll('.quality-btn').forEach(btn => btn.style.opacity = '0.5');
+    
+  } catch (error) {
+    console.error('Error al acceder a la cámara:', error);
+    document.getElementById('connectionStatus').textContent = '❌ Error: No se puede acceder a la cámara';
+    document.getElementById('connectionStatus').className = 'connection-status status-disconnected';
   }
 }
-
-                const quality = qualitySettings[currentQuality];
-                
-                const constraints = {
-                    video: {
-                        facingMode: isMobile ? currentCamera : 'user',
-                        width: { ideal: quality.width },
-                        height: { ideal: quality.height },
-                        frameRate: { ideal: 30 }
-                    },
-                    audio: {
-                        echoCancellation: true,
-                        noiseSuppression: true,
-                        autoGainControl: true
-                    }
-                };
-
-                videoStream = await navigator.mediaDevices.getUserMedia(constraints);
-                document.getElementById('videoStream').srcObject = videoStream;
-                
-                isCameraActive = true;
-                document.getElementById('startCameraBtn').disabled = true;
-                document.getElementById('startStreamBtn').disabled = false;
-                document.getElementById('connectionStatus').textContent = `📹 Cámara activa (${currentQuality}) - Lista para streaming`;
-                document.getElementById('connectionStatus').className = 'connection-status status-connected';
-                
-                // Deshabilitar cambio de calidad mientras la cámara está activa
-                document.querySelectorAll('.quality-btn').forEach(btn => btn.style.opacity = '0.5');
-                
-            } catch (error) {
-                console.error('Error al acceder a la cámara:', error);
-                document.getElementById('connectionStatus').textContent = '❌ Error: No se puede acceder a la cámara';
-                document.getElementById('connectionStatus').className = 'connection-status status-disconnected';
-            }
-        }
 
         async function switchCamera() {
             if (!isCameraActive || !isMobile) return;
