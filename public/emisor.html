@@ -6,25 +6,37 @@
   <title>Transmisión desde celular</title>
 </head>
 <body>
+  <h1>Emisor</h1>
   <video id="preview" autoplay muted playsinline></video>
   <script>
     const video = document.getElementById('preview');
-
-    // Solicita acceso a la cámara trasera
-    navigator.mediaDevices.getUserMedia({
-      video: {
-        facingMode: { exact: "environment" } // Esto fuerza el uso de la cámara trasera
-      },
-      audio: true
-    })
-    .then(stream => {
-      video.srcObject = stream;
-      video.play();
-    })
-    .catch(err => {
-      console.error("No se pudo acceder a la cámara: ", err);
-      alert("No se pudo acceder a la cámara. Por favor, verifica los permisos.");
+    const peerConnection = new RTCPeerConnection({
+      iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] // Servidor STUN para conexiones externas
     });
+    const socket = new WebSocket('ws://localhost:3002'); // Cambia localhost por la URL de tu servidor WebSocket
+
+    // Capturar el video de la cámara
+    navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+      .then(stream => {
+        video.srcObject = stream; // Mostrar el video localmente
+        stream.getTracks().forEach(track => peerConnection.addTrack(track, stream)); // Enviar el stream
+      })
+      .catch(err => alert("No se pudo acceder a la cámara"));
+
+    // Crear una oferta y enviarla al receptor
+    peerConnection.createOffer()
+      .then(offer => peerConnection.setLocalDescription(offer))
+      .then(() => {
+        socket.send(JSON.stringify({ type: 'offer', data: peerConnection.localDescription }));
+      });
+
+    // Recibir la respuesta del receptor
+    socket.onmessage = (event) => {
+      const message = JSON.parse(event.data);
+      if (message.type === 'answer') {
+        peerConnection.setRemoteDescription(message.data);
+      }
+    };
   </script>
 </body>
 </html>
