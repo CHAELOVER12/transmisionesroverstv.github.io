@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RoversTV</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- Navbar -->
+  <header>
+    <nav>
+      <div class="logo">
+        <div class="logo-shield">
+          <img src="./images/Image-removebg-preview.png" alt="logo" />
+        </div>
+        <div class="team-name">Monterrey Rovers</div>
+      </div>
+      <ul class="nav-links">
+        <li><a href="#inicio">Inicio</a></li>
+        <li><a href="#equipo">Equipo</a></li>
+        <li><a href="#noticias">Noticias</a></li>
+        <li><a href="./jersey.php">Quiero Adquirir la Jersey.</a></li>
+      </ul>
+      <div class="hamburger" onclick="toggleMobileMenu()">
+        <span></span>
+        <span></span>
+        <span></span>
+      </div>
+    </nav>
+    <div class="mobile-menu" id="mobileMenu">
+      <ul class="mobile-nav-links">
+        <li><a href="#inicio" onclick="closeMobileMenu()">Inicio</a></li>
+        <li><a href="#equipo" onclick="closeMobileMenu()">Equipo</a></li>
+        <li><a href="#noticias" onclick="closeMobileMenu()">Noticias</a></li>
+        <li><a href="./jersey.php" onclick="closeMobileMenu()">Quiero Adquirir la Jersey</a></li>
+      </ul>
+    </div>
+  </header>
+
+  <!-- Contenido principal -->
+  <section>
+    <h2>Transmisión en Vivo</h2>
+    <video id="liveVideo" controls autoplay></video>
+    <div id="scoreboard">
+      <span id="local">ROVERS</span>
+      <span id="score">0 - 0</span>
+      <span id="visitante">VISITANTE</span>
+    </div>
+  </section>
+
+  <script src="scripts.js"></script>
+</body>
+</html>

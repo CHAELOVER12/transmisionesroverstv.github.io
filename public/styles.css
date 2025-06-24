@@ -1,0 +1,154 @@
+/* General */
+body {
+  font-family: Arial, sans-serif;
+  background-color: #121212;
+  color: #ffffff;
+  margin: 0;
+  padding: 0;
+}
+
+h1, h2 {
+  margin: 0;
+  padding: 10px 0;
+  text-align: center;
+}
+
+/* Navbar */
+nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #ff0000;
+  padding: 10px 20px;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+}
+
+.logo-shield img {
+  height: 50px;
+  margin-right: 10px;
+}
+
+.team-name {
+  font-size: 20px;
+  font-weight: bold;
+  color: #ffffff;
+}
+
+.nav-links {
+  list-style: none;
+  display: flex;
+  gap: 20px;
+}
+
+.nav-links li a {
+  text-decoration: none;
+  color: #ffffff;
+  font-weight: bold;
+  transition: color 0.3s;
+}
+
+.nav-links li a:hover {
+  color: #000000;
+}
+
+.hamburger {
+  display: none;
+  flex-direction: column;
+  cursor: pointer;
+}
+
+.hamburger span {
+  background-color: #ffffff;
+  height: 3px;
+  width: 25px;
+  margin: 3px 0;
+}
+
+.mobile-menu {
+  display: none;
+  flex-direction: column;
+  background-color: #ff0000;
+  position: absolute;
+  top: 60px;
+  right: 0;
+  width: 100%;
+  padding: 10px;
+}
+
+.mobile-menu ul {
+  list-style: none;
+  padding: 0;
+}
+
+.mobile-menu li a {
+  text-decoration: none;
+  color: #ffffff;
+  font-weight: bold;
+  padding: 10px 0;
+  display: block;
+}
+
+/* Main Section */
+section {
+  padding: 20px;
+  text-align: center;
+}
+
+#liveVideo {
+  width: 80%;
+  max-width: 800px;
+  height: auto;
+  margin: 20px auto;
+  display: block;
+  border: 2px solid #ffffff;
+  border-radius: 10px;
+}
+
+#scoreboard {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  margin-top: 20px;
+  font-size: 24px;
+  font-weight: bold;
+  color: #ffffff;
+  background-color: #333333;
+  padding: 10px;
+  border-radius: 10px;
+  width: 80%;
+  max-width: 800px;
+  margin: 20px auto;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .nav-links {
+    display: none;
+  }
+
+  .hamburger {
+    display: flex;
+  }
+
+  .mobile-menu {
+    display: flex;
+  }
+
+  #liveVideo {
+    width: 100%;
+  }
+
+  #scoreboard {
+    flex-direction: column;
+    font-size: 20px;
+  }
+}
+
+

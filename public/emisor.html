@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Transmisión desde celular</title>
+</head>
+<body>
+  <video id="preview" autoplay muted playsinline></video>
+  <script>
+    const video = document.getElementById('preview');
+    navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+      .then(stream => { video.srcObject = stream; })
+      .catch(err => alert("No se pudo acceder a la cámara"));
+  </script>
+</body>
+</html>

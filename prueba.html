@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Receptor - RoversTV</title>
+  <script src="https://unpkg.com/peerjs@1.3.2/dist/peerjs.min.js"></script>
+</head>
+<body>
+  <h2>👀 Receptor</h2>
+  <label>ID del emisor:</label>
+  <input type="text" id="targetId" placeholder="Ej: m1n0tvx22" />
+  <button onclick="start()">Ver transmisión</button>
+  <video id="remoteVideo" autoplay playsinline controls style="width:100%; max-width:500px; margin-top: 10px;"></video>
+
+  <script>
+    const peer = new Peer();
+    const remoteVideo = document.getElementById('remoteVideo');
+
+    function start() {
+      const id = document.getElementById('targetId').value;
+      const call = peer.call(id, null); // sin enviar nuestro stream
+      call.on('stream', stream => {
+        remoteVideo.srcObject = stream;
+        remoteVideo.play();
+      });
+      call.on('error', err => console.error('Error en llamada:', err));
+    }
+  </script>
+</body>
+</html>
