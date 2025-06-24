@@ -15,7 +15,7 @@ const liveVideo = document.getElementById('liveVideo');
 const peerConnection = new RTCPeerConnection({
   iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] // Servidor STUN para conexiones externas
 });
-const socket = new WebSocket('ws://localhost:3002'); // Cambia localhost por la URL de tu servidor WebSocket
+const socket = new WebSocket('wss://transmisionesroverstvgithubio-production.up.railway.app'); // Cambia localhost por la URL de tu servidor WebSocket
 
 // Recibir el stream del emisor
 peerConnection.ontrack = (event) => {
