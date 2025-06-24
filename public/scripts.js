@@ -1,4 +1,4 @@
-const backendURL = "http://localhost:3000"; // Cambia esto por la URL de Railway
+const backendURL = "https://transmisionesroverstv.up.railway.app";// Cambia esto por la URL de Railway
 
 function sumarGol(equipo) {
   const marcador = document.getElementById("score");
