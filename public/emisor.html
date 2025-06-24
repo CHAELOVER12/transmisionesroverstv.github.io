@@ -13,7 +13,7 @@
     const peerConnection = new RTCPeerConnection({
       iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] // Servidor STUN para conexiones externas
     });
-    const socket = new WebSocket('ws://localhost:3002'); // Cambia localhost por la URL de tu servidor WebSocket
+    const socket = new WebSocket('ws://transmisionesroverstvgithubio-production.up.railway.app'); // Cambia localhost por la URL de tu servidor WebSocket
 
     // Capturar el video de la cámara
     navigator.mediaDevices.getUserMedia({ video: true, audio: true })
